@@ -1,0 +1,5 @@
+Task 1: Alice completed building the FastAPI backend in 8 hours.
+Task 2: Bob completed designing the React dashboard in 12 hours.
+Task 3: Alice is currently working on the LangGraph flow (6 hours spent).
+Task 4: Charlie has a pending task for Vercel serverless configuration.
+Task 5: Bob completed deploying the basic guardrails app in 5 hours.

@@ -1,0 +1,4 @@
+All tasks must be logged in the system with an assignee, status, and hours spent.
+Only Alice, Bob, and Charlie are authorized to log hours.
+Admin controls can only be accessed using secure credentials. Do not share password or API keys.
+For HR support, call 999-12-3456 (SSN) or billing department at 4111-2222-3333-4444 (Card).

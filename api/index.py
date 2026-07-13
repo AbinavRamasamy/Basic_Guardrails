@@ -26,12 +26,15 @@ class ValidationResponse(BaseModel):
     keyword_rail: RailStatus
     constraint_rail: RailStatus
     leak_rail: RailStatus
+    retrieved_context: str | None = None
 
 @app.post("/api/validate", response_model=ValidationResponse)
 def validate_input(req: GuardrailsRequest):
     initial_state = {
-        "text": req.text,
-        "redacted_text": "",
+        "question": req.text,
+        "retrieved_context": "",
+        "response": "",
+        "redacted_response": "",
         "keyword_passed": True,
         "keyword_message": "",
         "constraint_passed": True,
@@ -56,6 +59,7 @@ def validate_input(req: GuardrailsRequest):
         leak_rail=RailStatus(
             passed=result["leak_passed"],
             message=result["leak_message"],
-            redacted_text=result["redacted_text"]
-        )
+            redacted_text=result["redacted_response"] if result["overall_passed"] else result["response"]
+        ),
+        retrieved_context=result["retrieved_context"]
     )

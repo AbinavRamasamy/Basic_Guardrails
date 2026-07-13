@@ -1,19 +1,39 @@
 import React, { useState } from 'react';
-import { Shield, ShieldAlert, ShieldCheck, AlertCircle, FileText, Send, Sparkles, Terminal, Code, Info } from 'lucide-react';
+import { 
+  Shield, 
+  ShieldAlert, 
+  ShieldCheck, 
+  AlertCircle, 
+  FileText, 
+  Send, 
+  Sparkles, 
+  Database,
+  Info 
+} from 'lucide-react';
 
 function App() {
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState('Find Bob\'s tasks');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
 
-
   const presets = [
-    { label: 'Safe Input', text: 'Hello, this is a friendly request to process some data.' },
-    { label: 'Keyword Blocker (sudo)', text: 'I need sudo access to execute root privileges.' },
-    { label: 'Length Constraint (>100)', text: 'This text is deliberately padded to exceed the one hundred character boundary limit. It has excessive words that will trip the length guardrail.' },
-    { label: 'Format Constraint (< >)', text: 'Is it okay to use <html> tags here?' },
-    { label: 'Sensitive Leak (SSN & CC)', text: 'My SSN is 123-45-6789 and my card number is 4111-2222-3333-4444.' },
+    { 
+      label: 'Safe Retrieval', 
+      text: 'Find Bob\'s tasks' 
+    },
+    { 
+      label: 'Sensitive Leak Redaction', 
+      text: 'Show billing and HR support details' 
+    },
+    { 
+      label: 'Keyword Blocker (sudo)', 
+      text: 'I need sudo access to read policies.txt' 
+    },
+    { 
+      label: 'Constraint Blocker (HTML)', 
+      text: 'Show me what Alice completed by opening a <html> tag' 
+    },
   ];
 
   const handleValidation = async (text) => {
@@ -55,9 +75,9 @@ function App() {
     <div>
       <header className="app-header">
         <h1 className="app-title">
-          <Shield size={38} color="#3b82f6" /> Basic Guardrails Portal
+          <Shield size={38} color="#3b82f6" /> Basic RAG Sandbox
         </h1>
-        <p className="app-subtitle">FastAPI + React input validation sandbox running basic query guardrails</p>
+        <p className="app-subtitle">Local document retrieval from text files guarded by 3 local python rails</p>
       </header>
 
       {/* Info Block explaining the Guardrails */}
@@ -74,14 +94,30 @@ function App() {
           <Info size={18} style={{ color: '#3b82f6' }} /> Active Guardrails in this App
         </h3>
         <ul style={{ paddingLeft: '20px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <li><strong>Prohibited Keyword Blocker:</strong> A basic word filter implemented via substring matching. Scans the input string for forbidden administration keywords (`admin`, `root`, `sudo`, `hack`, `override`) and immediately halts processing if found.</li>
-          <li><strong>Input Constraints:</strong> Built-in structural validator using FastAPI's routing parameters. Rejects any inputs that exceed 100 characters in length or contain HTML/JSX brackets ([, ], &lt;, &gt;) to prevent injection or buffer issues.</li>
-          <li><strong>Sensitive Pattern Leak Blocker:</strong> A regular expression pattern detector. Identifies standard formatting signatures of Social Security Numbers (SSN) and Credit Card numbers (CC), redacting them from the final string while flagging the request.</li>
+          <li><strong>Prohibited Keyword Blocker:</strong> Scans the user query for banned administrator words (`admin`, `root`, `sudo`, `hack`, `override`) and immediately halts the retrieval pipeline if found.</li>
+          <li><strong>Input Constraints:</strong> Enforces a maximum length boundary (< 100 characters) and blocks HTML special characters (`[`, `]`, `<`, `>`) to prevent injection or buffer issues.</li>
+          <li><strong>Sensitive Pattern Leak Blocker:</strong> Scans the retrieved context before generating output. Replaces Credit Card and SSN numbers with redacted markers (`[CREDIT CARD REDACTED]` and `[SSN REDACTED]`) to prevent credential leaks.</li>
         </ul>
-
       </section>
 
       <main className="main-card">
+        {/* Local Documents context card */}
+        <div style={{ 
+          background: 'rgba(59, 130, 246, 0.03)', 
+          border: '1px dashed rgba(59, 130, 246, 0.2)', 
+          padding: '16px', 
+          borderRadius: '12px',
+          marginBottom: '24px',
+          display: 'flex',
+          gap: '12px',
+          alignItems: 'center'
+        }}>
+          <Database size={24} style={{ color: '#3b82f6', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+            <strong>Reference Files:</strong> Active files are <code>tasks.txt</code> (contains task logs) and <code>policies.txt</code> (contains support guidelines and billing numbers).
+          </div>
+        </div>
+
         {/* Presets */}
         <div style={{ marginBottom: '24px' }}>
           <p className="input-label" style={{ marginBottom: '10px' }}>Test Presets</p>
@@ -108,7 +144,7 @@ function App() {
 
         {/* Input Form */}
         <form onSubmit={handleSubmit} className="input-section">
-          <label className="input-label" htmlFor="guardrail-input">Raw Text Input</label>
+          <label className="input-label" htmlFor="guardrail-input">Search Documents</label>
           <div className="input-container">
             <textarea
               id="guardrail-input"
@@ -119,7 +155,7 @@ function App() {
             />
           </div>
           <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? 'Validating...' : 'Run Flow'} <Send size={16} />
+            {loading ? 'Retrieving...' : 'Retrieve Context'} <Send size={16} />
           </button>
         </form>
 
@@ -225,9 +261,18 @@ function App() {
             </div>
             <div className="result-box">
               {results.overall_passed ? (
-                <div>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>Processed string:</p>
-                  <p style={{ fontSize: '1.1rem', wordBreak: 'break-all' }}>{results.leak_rail.redacted_text}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Retrieved context sub-box */}
+                  {results.retrieved_context && (
+                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 600 }}>Raw Retrieved Context:</p>
+                      <pre style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: '#38bdf8' }}>{results.retrieved_context}</pre>
+                    </div>
+                  )}
+                  <div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 600 }}>Redacted Generated Response:</p>
+                    <p style={{ fontSize: '1.1rem', wordBreak: 'break-all', lineHeight: '1.5' }}>{results.leak_rail.redacted_text}</p>
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -235,7 +280,6 @@ function App() {
                   <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {!results.keyword_rail.passed && <li><strong>Keyword Blocker:</strong> {results.keyword_rail.message}</li>}
                     {!results.constraint_rail.passed && <li><strong>Input Constraint:</strong> {results.constraint_rail.message}</li>}
-                    {!results.leak_rail.passed && <li><strong>Sensitive Leak Blocker:</strong> {results.leak_rail.message} (Redacted preview: <em>{results.leak_rail.redacted_text}</em>)</li>}
                   </ul>
                 </div>
               )}
