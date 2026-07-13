@@ -75,7 +75,7 @@ function App() {
         </h3>
         <ul style={{ paddingLeft: '20px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <li><strong>Prohibited Keyword Blocker:</strong> A basic word filter implemented via substring matching. Scans the input string for forbidden administration keywords (`admin`, `root`, `sudo`, `hack`, `override`) and immediately halts processing if found.</li>
-          <li><strong>Input Constraints Rail:</strong> Built-in structural validator using FastAPI's routing parameters. Rejects any inputs that exceed 100 characters in length or contain HTML/JSX brackets ([, ], &lt;, &gt;) to prevent injection or buffer issues.</li>
+          <li><strong>Input Constraints:</strong> Built-in structural validator using FastAPI's routing parameters. Rejects any inputs that exceed 100 characters in length or contain HTML/JSX brackets ([, ], &lt;, &gt;) to prevent injection or buffer issues.</li>
           <li><strong>Sensitive Pattern Leak Blocker:</strong> A regular expression pattern detector. Identifies standard formatting signatures of Social Security Numbers (SSN) and Credit Card numbers (CC), redacting them from the final string while flagging the request.</li>
         </ul>
         
@@ -199,7 +199,7 @@ function App() {
             {/* Rail 2 */}
             <div className={`rail-card ${results ? (results.constraint_rail.passed ? 'passed' : 'failed') : ''}`}>
               <div className="rail-info">
-                <span className="rail-name">Input Constraints Rail</span>
+                <span className="rail-name">Input Constraints</span>
                 <span className="rail-desc">Enforces length limitation (max 100 characters) and blocks HTML special characters (&lt;, &gt;, [, ])</span>
                 {results && !results.constraint_rail.passed && (
                   <span style={{ color: 'var(--error-color)', fontSize: '0.85rem', marginTop: '6px' }}>
