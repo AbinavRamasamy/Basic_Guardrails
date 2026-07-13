@@ -1,11 +1,12 @@
 import re
+from typing import List, TypedDict
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from langgraph.graph import StateGraph, START, END
 
 app = FastAPI()
 
-# Enable CORS for frontend requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,66 +29,136 @@ class ValidationResponse(BaseModel):
     constraint_rail: RailStatus
     leak_rail: RailStatus
 
-BANNED_KEYWORDS = ["admin", "root", "sudo", "hack", "override"]
-CREDIT_CARD_REGEX = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
-SSN_REGEX = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+# --- LANGGRAPH GRAPH STATE ---
 
-def validate_keywords(text: str) -> RailStatus:
-    text_lower = text.lower()
-    for word in BANNED_KEYWORDS:
-        if word in text_lower:
-            return RailStatus(
-                passed=False,
-                message=f"Banned keyword '{word}' detected."
-            )
-    return RailStatus(passed=True, message="No banned keywords detected.")
+class BasicState(TypedDict):
+    text: str
+    redacted_text: str
+    keyword_passed: bool
+    keyword_message: str
+    constraint_passed: bool
+    constraint_message: str
+    leak_passed: bool
+    leak_message: str
+    overall_passed: bool
+    logs: List[str]
 
-def validate_constraints(text: str) -> RailStatus:
-    if len(text) > 100:
-        return RailStatus(
-            passed=False,
-            message="Input exceeds 100 characters constraint."
-        )
-    for char in ['[', ']', '<', '>']:
-        if char in text:
-            return RailStatus(
-                passed=False,
-                message=f"Forbidden character '{char}' detected."
-            )
-    return RailStatus(passed=True, message="Input constraints satisfied.")
+# --- NODE FUNCTIONS ---
 
-def validate_leaks(text: str) -> RailStatus:
-    redacted = text
-    leaks_found = []
+def check_keywords(state: BasicState) -> BasicState:
+    text = state['text'].lower()
+    banned = ['admin', 'root', 'sudo', 'hack', 'override']
+    triggered = [w for w in banned if w in text]
     
-    # Check SSN
-    if SSN_REGEX.search(text):
-        leaks_found.append("SSN pattern")
-        redacted = SSN_REGEX.sub("[REDACTED SSN]", redacted)
+    if triggered:
+        state['keyword_passed'] = False
+        state['keyword_message'] = f"Input contains prohibited keyword(s): {', '.join(triggered)}"
+        state['logs'].append("[check_keywords]: Flagged prohibited keyword usage.")
+    else:
+        state['keyword_passed'] = True
+        state['keyword_message'] = "Pass"
+        state['logs'].append("[check_keywords]: Verified keyword safety.")
+    return state
+
+def check_constraints(state: BasicState) -> BasicState:
+    text = state['text']
+    
+    if len(text) > 100:
+        state['constraint_passed'] = False
+        state['constraint_message'] = f"Input length ({len(text)} characters) exceeds the 100 character maximum limit."
+        state['logs'].append("[check_constraints]: Flagged length restriction violation.")
+        return state
         
-    # Check Credit Card
-    if CREDIT_CARD_REGEX.search(text):
-        leaks_found.append("Credit Card pattern")
-        redacted = CREDIT_CARD_REGEX.sub("[REDACTED CC]", redacted)
-        
-    if leaks_found:
-        return RailStatus(
-            passed=False,
-            message=f"Sensitive leak detected: {', '.join(leaks_found)}.",
-            redacted_text=redacted
-        )
-    return RailStatus(passed=True, message="No sensitive leaks detected.", redacted_text=text)
+    brackets = ['<', '>', '[', ']']
+    found = [b for b in brackets if b in text]
+    if found:
+        state['constraint_passed'] = False
+        state['constraint_message'] = f"Input contains restricted special bracket characters: {', '.join(found)}"
+        state['logs'].append("[check_constraints]: Flagged injection bracket usage.")
+    else:
+        state['constraint_passed'] = True
+        state['constraint_message'] = "Pass"
+        state['logs'].append("[check_constraints]: Verified structural constraints.")
+    return state
+
+def check_leaks(state: BasicState) -> BasicState:
+    text = state['text']
+    
+    ssn_pattern = r'\b\d{3}-\d{2}-\d{4}\b'
+    cc_pattern = r'\b(?:\d[ -]*?){13,16}\b'
+    
+    has_ssn = bool(re.search(ssn_pattern, text))
+    has_cc = bool(re.search(cc_pattern, text))
+    
+    redacted = text
+    redacted = re.sub(ssn_pattern, "[SSN REDACTED]", redacted)
+    redacted = re.sub(cc_pattern, "[CREDIT CARD REDACTED]", redacted)
+    
+    state['redacted_text'] = redacted
+    
+    if has_ssn or has_cc:
+        state['leak_passed'] = False
+        state['leak_message'] = f"Sensitive leaks redacted: {'SSN' if has_ssn else ''} {'Credit Card' if has_cc else ''}".strip()
+        state['logs'].append("[check_leaks]: Redacted sensitive credential pattern match.")
+    else:
+        state['leak_passed'] = True
+        state['leak_message'] = "Pass"
+        state['logs'].append("[check_leaks]: Verified credential safety.")
+    return state
+
+def evaluate_overall(state: BasicState) -> BasicState:
+    passed = state['keyword_passed'] and state['constraint_passed'] and state['leak_passed']
+    state['overall_passed'] = passed
+    state['logs'].append(f"[evaluate_overall]: Evaluation finished with status: {'PASSED' if passed else 'BLOCKED'}")
+    return state
+
+# --- COMPILE STATE GRAPH ---
+
+builder = StateGraph(BasicState)
+builder.add_node("keywords", check_keywords)
+builder.add_node("constraints", check_constraints)
+builder.add_node("leaks", check_leaks)
+builder.add_node("evaluate", evaluate_overall)
+
+builder.add_edge(START, "keywords")
+builder.add_edge("keywords", "constraints")
+builder.add_edge("constraints", "leaks")
+builder.add_edge("leaks", "evaluate")
+builder.add_edge("evaluate", END)
+
+graph = builder.compile()
+
+# --- FASTAPI ENDPOINT ---
 
 @app.post("/api/validate", response_model=ValidationResponse)
 def validate_input(req: GuardrailsRequest):
-    k_status = validate_keywords(req.text)
-    c_status = validate_constraints(req.text)
-    l_status = validate_leaks(req.text)
+    initial_state = {
+        "text": req.text,
+        "redacted_text": "",
+        "keyword_passed": True,
+        "keyword_message": "",
+        "constraint_passed": True,
+        "constraint_message": "",
+        "leak_passed": True,
+        "leak_message": "",
+        "overall_passed": True,
+        "logs": []
+    }
+    result = graph.invoke(initial_state)
     
-    overall = k_status.passed and c_status.passed and l_status.passed
     return ValidationResponse(
-        overall_passed=overall,
-        keyword_rail=k_status,
-        constraint_rail=c_status,
-        leak_rail=l_status
+        overall_passed=result["overall_passed"],
+        keyword_rail=RailStatus(
+            passed=result["keyword_passed"],
+            message=result["keyword_message"]
+        ),
+        constraint_rail=RailStatus(
+            passed=result["constraint_passed"],
+            message=result["constraint_message"]
+        ),
+        leak_rail=RailStatus(
+            passed=result["leak_passed"],
+            message=result["leak_message"],
+            redacted_text=result["redacted_text"]
+        )
     )
