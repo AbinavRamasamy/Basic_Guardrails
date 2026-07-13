@@ -6,7 +6,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
-  const [showInstructions, setShowInstructions] = useState(false);
+
 
   const presets = [
     { label: 'Safe Input', text: 'Hello, this is a friendly request to process some data.' },
@@ -78,43 +78,7 @@ function App() {
           <li><strong>Input Constraints:</strong> Built-in structural validator using FastAPI's routing parameters. Rejects any inputs that exceed 100 characters in length or contain HTML/JSX brackets ([, ], &lt;, &gt;) to prevent injection or buffer issues.</li>
           <li><strong>Sensitive Pattern Leak Blocker:</strong> A regular expression pattern detector. Identifies standard formatting signatures of Social Security Numbers (SSN) and Credit Card numbers (CC), redacting them from the final string while flagging the request.</li>
         </ul>
-        
-        <button 
-          className="submit-btn" 
-          style={{ 
-            marginTop: '16px',
-            background: 'transparent',
-            border: '1px solid var(--border-color)',
-            fontSize: '0.85rem',
-            padding: '6px 12px',
-            boxShadow: 'none'
-          }}
-          onClick={() => setShowInstructions(!showInstructions)}
-        >
-          <Code size={14} /> {showInstructions ? 'Hide Run Code' : 'Show Run Code'}
-        </button>
 
-        {showInstructions && (
-          <div style={{ 
-            marginTop: '16px', 
-            background: '#0a0c10', 
-            padding: '16px', 
-            borderRadius: '12px',
-            fontFamily: 'monospace',
-            fontSize: '0.8rem',
-            border: '1px solid var(--border-color)',
-            overflowX: 'auto'
-          }}>
-            <p style={{ color: '#38bdf8', marginBottom: '8px' }}># 1. Install dependencies</p>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>pip install -r requirements.txt<br />npm install</p>
-            
-            <p style={{ color: '#38bdf8', marginBottom: '8px' }}># 2. Run backend server (from the app folder)</p>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>uvicorn api.index:app --reload --port 8000</p>
-            
-            <p style={{ color: '#38bdf8', marginBottom: '8px' }}># 3. Run React frontend dev server</p>
-            <p style={{ color: 'var(--text-secondary)' }}>npm run dev</p>
-          </div>
-        )}
       </section>
 
       <main className="main-card">
